@@ -1,10 +1,17 @@
-import logging
 import asyncio
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import logging
+import openai
+import os
+from dotenv import load_dotenv
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
-# Replace this with your actual API token obtained securely
-TELEGRAM_API_TOKEN = '7965182442:AAF4vf1eY_mzOQVekKSeqF2ZIyYMNc7nKsE'  # Ensure this is correct
+# Load environment variables from .env file
+load_dotenv()
+
+# Accessing the variables
+TELEGRAM_API_TOKEN = os.getenv("TELEGRAM_API_TOKEN")
+debug = os.getenv("DEBUG") == "True"
 
 # Set up basic logging
 logging.basicConfig(
@@ -13,14 +20,50 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+'''
+    Primary functions
+'''
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info("Received /start command from user %s", update.effective_user.id)
-    await update.message.reply_text("Hello! I'm your bot. Send me a message, and I'll echo it back!")
+    # Create an inline keyboard with a button that says "Get Info"
+    keyboard = [
+        [InlineKeyboardButton("Get Info", callback_data='info')],
+        [InlineKeyboardButton("Help", callback_data='help')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Hello! Use the buttons below:", reply_markup=reply_markup)
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_message = update.message.text
     logger.info("Echoing message from user %s: %s", update.effective_user.id, user_message)
     await update.message.reply_text(user_message)
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a help message when the /help command is issued."""
+    await update.message.reply_text("Need help? I'm here! Type any message, and I'll echo it back to you.")
+
+async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send an info message when the /info command is issued."""
+    await update.message.reply_text("I'm a simple bot created to echo messages and learn new tricks!")
+
+
+'''
+    Special Functions
+'''
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()  # Acknowledge the button click
+
+    # Check which button was clicked and respond accordingly
+    if query.data == 'info':
+        await query.edit_message_text("I'm a bot created to demonstrate button handling!")
+    elif query.data == 'help':
+        await query.edit_message_text("Press /help to learn more about what I can do.")
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log the error and send a message to the developer."""
+    logger.warning(f'Update "{update}" caused error "{context.error}"')
+
 
 # Main function to set up the bot application
 async def main():
@@ -30,6 +73,11 @@ async def main():
     # Add command and message handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("info", info_command))
+
+    app.add_error_handler(error_handler)
 
     # Run polling with a managed shutdown
     await app.initialize()
