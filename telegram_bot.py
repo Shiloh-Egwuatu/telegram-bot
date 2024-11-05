@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
+from openai_request import get_openai_response
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -33,10 +35,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Hello! Use the buttons below:", reply_markup=reply_markup)
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_message = update.message.text
-    logger.info("Echoing message from user %s: %s", update.effective_user.id, user_message)
-    await update.message.reply_text(user_message)
+# Message handler for OpenAI response
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_input = update.message.text
+    bot_response = await asyncio.to_thread(get_openai_response, user_input)  # Call the function from openai_helper
+    await update.message.reply_text(bot_response)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a help message when the /help command is issued."""
@@ -72,7 +75,7 @@ async def main():
 
     # Add command and message handlers
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("info", info_command))

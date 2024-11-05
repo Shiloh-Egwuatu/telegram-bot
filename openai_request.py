@@ -10,7 +10,7 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_KEY")
 debug = os.getenv("DEBUG") == "True"
 
-client = openai.OpenAI(api_key = 'OPEN_API_KEY')
+client = openai.OpenAI(api_key = OPENAI_API_KEY)
 
 def get_openai_response(user_input):
     """Try to get a response, and retry after a delay if rate limit is hit."""
@@ -21,7 +21,9 @@ def get_openai_response(user_input):
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": user_input}
-                ]
+                ],
+                max_tokens=50,
+                temperature=0.7
             )
             return completion.choices[0].message.content.strip()
         except openai.RateLimitError as e:
