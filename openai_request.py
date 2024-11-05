@@ -1,14 +1,9 @@
 import time
 import openai
 import os
+from config import OPENAI_API_KEY
 from dotenv import load_dotenv
-
-# load environment variables from .env file
-load_dotenv()
-
-# Accessing the variables
-OPENAI_API_KEY = os.getenv("OPENAI_KEY")
-debug = os.getenv("DEBUG") == "True"
+from logger import logger
 
 client = openai.OpenAI(api_key = OPENAI_API_KEY)
 
@@ -19,7 +14,7 @@ def get_openai_response(user_input):
             completion = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "system", "content": "You are a Joe from Nigeria."},
                     {"role": "user", "content": user_input}
                 ],
                 max_tokens=50,
@@ -27,9 +22,10 @@ def get_openai_response(user_input):
             )
             return completion.choices[0].message.content.strip()
         except openai.RateLimitError as e:
-            print("Rate limit hit. Retrying in 5 seconds...")
+            logger.error(f"Rate limit hit: {e}; -- Retrying in 5 seconds...")
             time.sleep(5)  # Wait before retrying
         except Exception as e:
+            logger.error(f"Unexpected error: {e}")
             return f"Error communicating with OpenAI API: {e}"
     return "Failed to get response after multiple attempts."
 

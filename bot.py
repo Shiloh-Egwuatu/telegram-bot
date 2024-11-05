@@ -1,31 +1,15 @@
 import asyncio
-import logging
-import openai
-import os
+from config import TELEGRAM_API_TOKEN
 from dotenv import load_dotenv
+from logger import logger
+from openai_request import get_openai_response
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-
-from openai_request import get_openai_response
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Accessing the variables
-TELEGRAM_API_TOKEN = os.getenv("TELEGRAM_API_TOKEN")
-debug = os.getenv("DEBUG") == "True"
-
-# Set up basic logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
 
 '''
     Primary functions
 '''
+# Start Command Handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Create an inline keyboard with a button that says "Get Info"
     keyboard = [
@@ -38,6 +22,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Message handler for OpenAI response
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_input = update.message.text
+    logger.info(f"Received message: {user_input}")
     bot_response = await asyncio.to_thread(get_openai_response, user_input)  # Call the function from openai_helper
     await update.message.reply_text(bot_response)
 
